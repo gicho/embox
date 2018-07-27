@@ -20,13 +20,32 @@
 
 #define MAX_BUF_SZ   256
 
-#define TEST_ITERS   20
+#define TEST_ITERS   10
 
 static int buffer_cmp(char *tx, char *rx, size_t sz) {
 	int i;
 
 	for (i = 0; i < sz; i++) {
 		if (tx[i] != rx[i]) {
+			int j, k;
+
+			/* Print out tx and rx data */
+			printf("TX:\n");
+			for (k = 0; k < sz / 16; k++) {
+				for (j = 0; j < 16; j++) {
+					printf("%02X ", tx[16 * k + j]);
+				}
+				printf("\n");
+			}
+			printf("RX:\n");
+			for (k = 0; k < sz / 16; k++) {
+				for (j = 0; j < 16; j++) {
+					printf("%02X ", rx[16 * k + j]);
+				}
+				printf("\n");
+			}
+			printf("\n");
+
 			return -1;
 		}
 	}
@@ -93,9 +112,6 @@ int nrf24_test_tx_rx(int host_nr, int payload_len) {
 	/* Send and receive data_sz amount of data */
 	while (1) {
 start_tx:
-
-		log_debug("TX (tx_i=%d,rx_i=%d,data_sz=%d)\n",
-				tx_i, rx_i, data_sz);
 		while (tx_i < data_sz) {
 			nrf24_send(&tx_buf[tx_i]);
 			while (nrf24_isSending())
@@ -103,23 +119,31 @@ start_tx:
 			tmp = nrf24_lastMessageStatus();
 			if (tmp == NRF24_TRANSMISSON_OK) {
 				tx_i += payload_len;
+				log_debug("TX (tx_i=%d,rx_i=%d,data_sz=%d)\n",
+						tx_i, rx_i, data_sz);
+			} else {
+				usleep(10000);
 			}
 		}
-
-		sleep(1);	
 
 start_rx:
-		log_debug("RX (tx_i=%d,rx_i=%d,data_sz=%d)\n",
-				tx_i, rx_i, data_sz);
 		nrf24_powerUpRx();
 		while (rx_i < data_sz) {
-			if (nrf24_dataReady()) {
-				nrf24_getData(&rx_buf[rx_i]);
+			while (!nrf24_dataReady())
+				;
+			nrf24_getData(&rx_buf[rx_i]);
+
+			/* Check if this packet is not equal not the previous one */
+			/* TODO Investigate why during NRF24 module's start in RX mode
+			 * we can get two identical packets from the transmitter.
+			 * To reproduce this behaviour, first start TX, then start RX. */
+			if (rx_i < payload_len ||
+					(rx_buf[rx_i] != rx_buf[rx_i - payload_len])) {
 				rx_i += payload_len;
+				log_debug("RX (tx_i=%d,rx_i=%d,data_sz=%d)\n",
+					tx_i, rx_i, data_sz);
 			}
 		}
-
-		sleep(1);
 
 		/* Finish if all data were transmitted and received */
 		if (tx_i == data_sz && rx_i == data_sz) {
@@ -154,7 +178,7 @@ static int nrf24_test(int host_nr) {
 	printf("NRF24 enabled\n");
 
 	/* Test for different payloads */
-	for (payload_len = 4; payload_len < 32; payload_len++) {
+	for (payload_len = 4; payload_len <= NRF24_MAX_PAYLOAD; payload_len++) {
 		nrf24_config(96, payload_len);
 
 		switch (host_nr) {

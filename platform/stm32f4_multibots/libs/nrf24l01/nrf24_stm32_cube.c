@@ -32,7 +32,7 @@
 #define SPIx_CS_PIN              GPIO_PIN_12
 #define SPIx_CS_GPIO_PORT        GPIOB
 
-#define NRF24_CE_PIN             11
+#define NRF24_CE_PIN             10
 
 #else
 #error Unsupported SPI
@@ -189,13 +189,13 @@ static int exti_line0_init(void) {
 	GPIO_InitTypeDef   GPIO_InitStructure;
 
 	/* Enable GPIOA clock */
-	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
 
 	/* Configure PA0 pin as input floating */
 	GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
 	GPIO_InitStructure.Pull = GPIO_NOPULL;
 	GPIO_InitStructure.Pin  = GPIO_PIN_0;
-	HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 	return irq_attach(EXTI0_IRQn + 16, exti0_handler, 0, NULL, "NRF24");
 }

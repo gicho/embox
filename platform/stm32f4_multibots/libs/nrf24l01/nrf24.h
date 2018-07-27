@@ -27,6 +27,8 @@
 #define NRF24_TRANSMISSON_OK 0
 #define NRF24_MESSAGE_LOST   1
 
+#define NRF24_MAX_PAYLOAD 32
+
 /* adjustment functions */
 void    nrf24_init();
 void    nrf24_rx_address(uint8_t* adr);

@@ -6,9 +6,7 @@
  * @author Alex Kalmuk
  */
 
-#include <errno.h>
 #include <string.h>
-#include <stdio.h>
 #include <assert.h>
 
 #include "stm32f4_discovery.h"
@@ -26,18 +24,24 @@ static void stm32_delay(uint32_t delay) {
 }
 
 void motor_init(struct stepper_motor *m, uint16_t in1, uint16_t in2,
-		uint16_t in3, uint16_t in4, GPIO_TypeDef  *GPIOx) {
+		uint16_t in3, uint16_t in4, GPIO_TypeDef *GPIOx) {
 	GPIO_InitTypeDef  GPIO_InitStruct;
 
 	memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
+
+	/* FIXME Add ability to use any GPIO */
+	assert(GPIOx == GPIOD || GPIOx == GPIOE);
+	if (GPIOx == GPIOD) {
+		__GPIOD_CLK_ENABLE();
+	} else if (GPIOx == GPIOE){
+		__GPIOE_CLK_ENABLE();
+	}
 
 	m->in1 = in1;
 	m->in2 = in2;
 	m->in3 = in3;
 	m->in4 = in4;
 	m->GPIOx = GPIOx;
-
-	//MOTOR_CLK_ENABLE();
 
 	GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull      = GPIO_PULLUP;
@@ -54,8 +58,6 @@ void motor_init(struct stepper_motor *m, uint16_t in1, uint16_t in2,
 	m->speed = MOTOR_DEFAULT_SPEED;
 	m->step_size = MOTOR_STEP_SIZE;
 	m->steps_cnt = 0;
-
-	printf("Motor inited\n");
 }
 
 static void motor_do_one_step2(struct stepper_motor *m1, struct stepper_motor *m2, int direction) {
